@@ -1,0 +1,85 @@
+# Base system + essential tools
+pacstrap /mnt base base-devel linux linux-headers git wget curl
+
+# NVIDIA specific (Proprietary driver for RTX 4070)
+# 'nvidia' pulls in the kernel module, 'nvidia-utils' includes CUDA runtime & tools
+pacstrap /mnt nvidia nvidia-utils nvidia-settings
+
+
+
+
+arch-chroot /mnt
+
+
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+locale-gen
+echo "en_US.UTF-8" > /etc/locale.conf
+ln -sf /usr/share/zoneinfo/UTC /etc/localtime  # Adjust UTC to your region
+hwclock --systohc
+
+
+pacman -S intel-ucode  # If using Intel CPU
+pacman -S linux-firmware
+pacman -S git wget curl base base-devel cmake ninja python-pip python-venv jq git
+
+
+
+
+
+pacman -S nvidia-powerd
+systemctl enable nvidia-powerd
+
+
+
+
+echo "my-arch-cuda" > /etc/hostname
+# Configure /etc/hosts and /etc/systemd/network (or use NetworkManager)
+pacman -S networkmanager
+systemctl enable NetworkManager
+
+
+
+
+
+
+passwd
+# Create a user (replace 'user' with your name)
+useradd -m -G wheel -s /bin/bash user
+passwd user
+# Enable sudo
+EDITOR=nano visudo
+# Uncomment: %wheel ALL=(ALL:ALL) ALL
+
+
+sudo pacman -S --needed git base-devel
+
+
+aura -A cudnn cuda
+
+
+
+
+
+# Check Driver & GPU
+nvidia-smi
+
+# Check CUDA Compiler (if installed)
+nvcc --version
+
+# Check cuDNN version
+cat /usr/include/cudnn_version.h | grep CUDNN_MAJOR -A 2
+
+
+
+
+
+python -m venv llm-env
+source llm-env/bin/activate
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+Kernel Headers: Ensure linux-headers is installed (done in Phase 1) because some NVIDIA modules or custom CUDA kernels need to compile against the running kernel.
+ZFS/Btrfs: If you plan to use Btrfs snapshots (common on Arch), ensure the NVIDIA module is included in the initramfs. Add MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm) to /etc/mkinitcpio.conf and run sudo mkinitcpio -P.
+Would you like a script to automate the virtual environment setup for your speech-to-text or TTS nodes next?Python Environment: Do not install PyTorch via pacman. Use pip inside a virtual environment to ensure it links against your specific CUDA version.
+bash
+￼
+
